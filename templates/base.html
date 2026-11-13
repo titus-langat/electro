@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ BUSINESS.name }} — Bomet CBD{% endblock %}</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="{{ url_for('index') }}">
+    <span class="brand-badge">AV</span>
+    <span><strong>{{ BUSINESS.name }}</strong>
+      <small>Bomet CBD · Till {{ BUSINESS.till }}</small></span>
+  </a>
+  <nav>
+    <a href="{{ url_for('index') }}">Shop</a>
+    <a href="{{ url_for('admin_login') }}">Admin</a>
+    <button id="open-cart" class="cart-btn">🛒 Cart <span class="badge" id="cart-badge">{{ cart_count }}</span></button>
+  </nav>
+</header>
+
+{% with msgs = get_flashed_messages() %}
+  {% for m in msgs %}<div class="flash">{{ m }}</div>{% endfor %}
+{% endwith %}
+
+<main>{% block content %}{% endblock %}</main>
+
+<footer>
+  <div><strong>{{ BUSINESS.name }}</strong> — {{ BUSINESS.location }}, {{ BUSINESS.county }}</div>
+  <div>M-Pesa Till <strong>{{ BUSINESS.till }}</strong> · ☎ {{ BUSINESS.phone }} · Mon–Sat 8:00am–7:00pm</div>
+  <div>&copy; {{ year }} · eTIMS-enabled receipts · Karibu tena!</div>
+</footer>
+
+<!-- slide-out cart drawer -->
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer">
+  <div class="d-head">
+    <h3>🛒 Your Cart</h3>
+    <button class="d-close" id="close-drawer">&times;</button>
+  </div>
+  <div class="d-items" id="d-items"><p class="d-empty">Loading…</p></div>
+  <div class="d-foot">
+    <div class="d-total"><span>Total</span><span id="d-total">KSh 0</span></div>
+    <a class="btn big" href="{{ url_for('checkout') }}">Checkout → M-Pesa</a>
+    <p class="d-note">Pay with M-Pesa prompt or Till <strong>{{ BUSINESS.till }}</strong> · eTIMS receipt included</p>
+  </div>
+</aside>
+
+<div class="cart-bar" id="cart-bar">
+  <span>🛒 <span id="bar-count">0</span> items</span>
+  <span><b id="bar-total">KSh 0</b> · View cart →</span>
+</div>
+
+<a class="wa-float" target="_blank" rel="noopener"
+   href="https://wa.me/{{ BUSINESS.phone|replace('+','')|replace(' ','') }}?text=Hi%20Aviva%20Electronics%2C%20I%20want%20to%20order">💬</a>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

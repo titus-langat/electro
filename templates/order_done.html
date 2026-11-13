@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel narrow center">
+  <h1>{% if o['status']=='paid' %}Payment received — Asante!{% else %}Order placed — awaiting payment{% endif %}</h1>
+  <p>Order <strong>{{ o['order_no'] }}</strong> · {{ o['total']|kes }}</p>
+  <a class="btn big" href="{{ url_for('receipt', order_no=o['order_no']) }}">View / print receipt</a>
+</section>
+{% endblock %}

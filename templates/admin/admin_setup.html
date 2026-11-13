@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>🚀 Setup &amp; Go-Live Checklist</h1>
+  <p class="muted">Complete every item to activate real M-Pesa prompts and live Till
+     {{ BUSINESS.till }} capture. {{ done }} of {{ checks|length }} done.</p>
+  <div class="progress"><div style="width: {{ (done * 100 / checks|length)|round }}%"></div></div>
+
+  {% for title, ok, how in checks %}
+  <div class="check {{ 'ok' if ok else 'todo' }}">
+    <span class="mark">{{ '✅' if ok else '⬜' }}</span>
+    <div><h4>{{ title }}</h4><p>{{ how }}</p></div>
+  </div>
+  {% endfor %}
+
+  <div class="actions">
+    <form method="post" action="{{ url_for('admin_register_c2b') }}">
+      <button class="btn">Register C2B URLs now</button>
+    </form>
+    <a class="btn ghost" href="{{ url_for('admin_dashboard') }}">← Back to dashboard</a>
+  </div>
+</section>
+{% endblock %}
