@@ -502,7 +502,6 @@ def api_pay(order_no):
     if o["status"] == "paid":
         return jsonify({"ok": True, "msg": "Already paid"})
     try:
-        # Correctly passing the full callback path using PUBLIC_BASE_URL
         resp = Daraja().stk_push(o["total"], o["customer_phone"], order_no,
                                  "TT Electronics",
                                  f"{PUBLIC_BASE_URL}/api/mpesa/stk/callback")
@@ -629,6 +628,82 @@ def admin_login():
                 return redirect(url_for("admin_dashboard"))
         flash("Invalid admin password.")
     return render_template("admin/admin_login.html")
+
+
+@app.route("/admin/change-password", methods=["GET", "POST"])
+def admin_change_password():
+    if not session.get("admin"):
+        flash("Admin access required.")
+        return redirect(url_for("admin_login"))
+    
+    if request.method == "POST":
+        current_pwd = request.form.get("current_password", "")
+        new_pwd = request.form.get("new_password", "")
+        confirm_pwd = request.form.get("confirm_password", "")
+        
+        if not new_pwd or new_pwd != confirm_pwd or len(new_pwd) < 6:
+            flash("New passwords do not match or are too short (minimum 6 characters).")
+            return redirect(url_for("admin_change_password"))
+        
+        with db() as conn:
+            row = conn.execute(text("SELECT password_hash FROM admin_auth LIMIT 1")).fetchone()
+            if row and check_password_hash(row[0], current_pwd):
+                new_hash = generate_password_hash(new_pwd)
+                conn.execute(text("UPDATE admin_auth SET password_hash=:p"), {"p": new_hash})
+                conn.commit()
+                flash("Admin password updated successfully.")
+                return redirect(url_for("admin_dashboard"))
+            else:
+                flash("Incorrect current password.")
+                
+    return render_template("admin/admin_change_password.html")
+
+
+@app.route("/admin/forgot-password", methods=["GET", "POST"])
+def admin_forgot_password():
+    step = session.get("admin_reset_step", "request")
+    
+    if request.method == "POST":
+        action = request.form.get("action", "request")
+        
+        if action == "request":
+            email = request.form.get("email", "").strip()
+            if email != MAIL_USERNAME:
+                flash("Email does not match the authorized admin email configuration.")
+                return redirect(url_for("admin_forgot_password"))
+            
+            otp = str(random.randint(100000, 999999))
+            session["admin_reset_otp"] = otp
+            session["admin_reset_email"] = email
+            session["admin_reset_step"] = "verify"
+            
+            sent = send_otp_email(email, otp)
+            if sent:
+                flash("Password reset OTP code sent to your admin email successfully.")
+            else:
+                flash(f"Reset request processed. Check your terminal/logs for OTP code if SMTP is unconfigured.")
+            return redirect(url_for("admin_forgot_password"))
+            
+        elif action == "verify":
+            otp_input = request.form.get("otp", "").strip()
+            new_pwd = request.form.get("new_password", "").strip()
+            
+            if otp_input == session.get("admin_reset_otp") and len(new_pwd) >= 6:
+                with db() as conn:
+                    new_hash = generate_password_hash(new_pwd)
+                    conn.execute(text("UPDATE admin_auth SET password_hash=:p"), {"p": new_hash})
+                    conn.commit()
+                    
+                session.pop("admin_reset_otp", None)
+                session.pop("admin_reset_email", None)
+                session.pop("admin_reset_step", None)
+                
+                flash("Admin password reset successfully. Please log in with your new password.")
+                return redirect(url_for("admin_login"))
+            else:
+                flash("Invalid OTP code or password too short (min 6 characters).")
+                
+    return render_template("admin/admin_forgot_password.html", step=session.get("admin_reset_step", "request"))
 
 
 @app.route("/admin/dashboard")
