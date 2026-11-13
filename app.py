@@ -149,7 +149,6 @@ def init_db():
                 conn.execute(text(query_str))
         conn.commit()
 
-        # Safely migrate older databases to include user names
         try:
             conn.execute(text("ALTER TABLE users ADD COLUMN name VARCHAR(255) DEFAULT ''"))
             conn.commit()
@@ -266,7 +265,7 @@ def send_otp_email(to_email, otp_code):
         This code expires in 15 minutes. If you did not request this, please ignore this email.
 
         Regards,
-        TT Electronics Bomet CBD (0718930255/0751754591)
+        TT Electronics Bomet CBD
         """
         msg.attach(MIMEText(body, "plain"))
 
@@ -291,7 +290,6 @@ def account_setup():
         gmail = request.form.get("gmail", "").strip()
         password = request.form.get("password", "").strip()
 
-        # Enforce name, valid phone, email, and strong password (min 8 chars)
         if not name or len(identifier) < 12 or not gmail or len(password) < 8:
             flash("Full Name, valid Phone Number, Gmail, and a Strong Password (minimum 8 characters) are required.")
             return redirect(url_for("account_setup"))
@@ -504,6 +502,7 @@ def api_pay(order_no):
     if o["status"] == "paid":
         return jsonify({"ok": True, "msg": "Already paid"})
     try:
+        # Correctly passing the full callback path using PUBLIC_BASE_URL
         resp = Daraja().stk_push(o["total"], o["customer_phone"], order_no,
                                  "TT Electronics",
                                  f"{PUBLIC_BASE_URL}/api/mpesa/stk/callback")
