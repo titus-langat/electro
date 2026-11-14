@@ -140,21 +140,24 @@ CREATE TABLE IF NOT EXISTS transactions(
 
 
 def init_db():
-    with db() as conn:
+    # 1. Initialize schema tables safely
+    with engine.begin() as conn:
         for stmt in SCHEMA_SQL.strip().split(";"):
             if stmt.strip():
                 query_str = stmt.strip()
                 if "postgresql" in DATABASE_URL:
                     query_str = query_str.replace("INTEGER PRIMARY KEY AUTOINCREMENT", "SERIAL PRIMARY KEY")
                 conn.execute(text(query_str))
-        conn.commit()
 
+    # 2. Run optional migrations safely in an isolated transaction block with rollback
+    with engine.begin() as conn:
         try:
             conn.execute(text("ALTER TABLE users ADD COLUMN name VARCHAR(255) DEFAULT ''"))
-            conn.commit()
         except Exception:
-            pass
+            pass  # Column already exists; rollback happens automatically on exit
 
+    # 3. Seed initial products and admin account safely
+    with engine.begin() as conn:
         res = conn.execute(text("SELECT COUNT(*) FROM products")).fetchone()
         if res[0] == 0:
             seed = [
@@ -168,12 +171,10 @@ def init_db():
             for n, d, p, cat, s in seed:
                 conn.execute(text("INSERT INTO products(name,description,price,category,stock,created_at) VALUES(:n,:d,:p,:cat,:s,:c)"),
                              {"n": n, "d": d, "p": p, "cat": cat, "s": s, "c": iso_now()})
-            conn.commit()
 
         admin_row = conn.execute(text("SELECT * FROM admin_auth LIMIT 1")).fetchone()
         if not admin_row:
             conn.execute(text("INSERT INTO admin_auth(password_hash) VALUES(:p)"), {"p": generate_password_hash(ADMIN_PASSWORD)})
-            conn.commit()
 
 
 init_db()
